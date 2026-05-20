@@ -1,0 +1,1461 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>ShowSeeker — Events Near You</title>
+  <style>
+    :root {
+      --bg:      #0A1628;
+      --mid:     #0D2045;
+      --blue:    #026CDF;
+      --accent:  #00C3FF;
+      --green:   #00D68F;
+      --red:     #FF4D6D;
+      --wa:      #25D366;
+      --card:    rgba(13,32,69,0.9);
+      --border:  rgba(0,195,255,0.15);
+      --text:    #E8F4FF;
+      --muted:   #7A9BC4;
+    }
+    *{box-sizing:border-box;margin:0;padding:0}
+    html,body{height:100%;overflow:hidden;font-family:'Segoe UI',system-ui,sans-serif;background:var(--bg);color:var(--text)}
+    body{display:flex;flex-direction:column}
+
+    /* ── HEADER ── */
+    #header{
+      flex-shrink:0;
+      background:linear-gradient(135deg,var(--mid),var(--bg));
+      border-bottom:1px solid var(--border);
+      padding:10px 18px;
+      display:flex;align-items:center;justify-content:space-between;
+      z-index:10;
+    }
+    .logo{display:flex;align-items:center;gap:10px}
+    .logo-icon{
+      width:36px;height:36px;border-radius:10px;font-size:18px;
+      background:linear-gradient(135deg,var(--blue),var(--accent));
+      display:flex;align-items:center;justify-content:center;
+    }
+    .logo-name{font-size:19px;font-weight:700}
+    .logo-sub{font-size:11px;color:var(--accent);letter-spacing:.4px}
+    .header-right{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+    .pill{
+      background:rgba(0,195,255,.1);border:1px solid rgba(0,195,255,.3);
+      border-radius:20px;padding:5px 12px;font-size:12px;color:var(--accent);
+      cursor:pointer;white-space:nowrap;max-width:170px;overflow:hidden;text-overflow:ellipsis;
+    }
+    .pill:hover{background:rgba(0,195,255,.2)}
+    .hbtn{
+      background:rgba(255,255,255,.06);border:1px solid var(--border);
+      border-radius:8px;color:var(--text);cursor:pointer;
+      padding:6px 12px;font-size:12px;display:flex;align-items:center;gap:5px;
+    }
+    .hbtn:hover{background:rgba(2,108,223,.3);border-color:var(--accent)}
+    .live-dot{
+      display:inline-flex;align-items:center;gap:4px;
+      background:rgba(0,214,143,.1);border:1px solid rgba(0,214,143,.3);
+      border-radius:20px;padding:4px 10px;font-size:11px;color:var(--green);
+    }
+    .live-dot::before{content:'';display:inline-block;width:6px;height:6px;background:var(--green);border-radius:50%;animation:pulse 2s infinite}
+    @keyframes pulse{0%,100%{opacity:1}50%{opacity:.3}}
+
+    /* ── CHAT AREA ── */
+    #chat{
+      flex:1;overflow-y:auto;padding:18px 20px;
+      display:flex;flex-direction:column;gap:14px;
+    }
+    #chat::-webkit-scrollbar{width:4px}
+    #chat::-webkit-scrollbar-thumb{background:var(--border);border-radius:2px}
+
+    /* ── WELCOME ── */
+    #welcome{
+      display:flex;flex-direction:column;align-items:center;
+      text-align:center;padding:30px 20px;gap:14px;
+    }
+    .w-icon{
+      width:70px;height:70px;border-radius:20px;font-size:34px;
+      background:linear-gradient(135deg,var(--blue),var(--accent));
+      display:flex;align-items:center;justify-content:center;
+      box-shadow:0 8px 28px rgba(2,108,223,.4);
+    }
+    #welcome h1{font-size:24px;font-weight:800}
+    #welcome h1 span{color:var(--accent)}
+    #welcome p{font-size:13px;color:var(--muted);max-width:380px;line-height:1.7}
+    .chips{display:flex;flex-wrap:wrap;gap:8px;justify-content:center;margin-top:4px}
+    .chip{
+      background:rgba(2,108,223,.15);border:1px solid rgba(2,108,223,.35);
+      border-radius:20px;padding:7px 14px;font-size:13px;color:var(--accent);
+      cursor:pointer;transition:all .2s;
+    }
+    .chip:hover{background:rgba(2,108,223,.35);border-color:var(--accent)}
+
+    /* ── MESSAGE ROWS ── */
+    .row{display:flex;align-items:flex-end;gap:9px;max-width:860px}
+    .row.user{flex-direction:row-reverse;align-self:flex-end}
+    .row.bot {flex-direction:row;align-self:flex-start;max-width:100%}
+    .av{
+      width:30px;height:30px;border-radius:9px;flex-shrink:0;
+      display:flex;align-items:center;justify-content:center;font-size:15px;
+    }
+    .row.bot  .av{background:linear-gradient(135deg,var(--blue),var(--accent))}
+    .row.user .av{background:linear-gradient(135deg,#5A2EF0,#8B5CF6)}
+    .bubble-wrap{display:flex;flex-direction:column;max-width:580px}
+    .row.bot .bubble-wrap{max-width:100%}
+    .bubble{
+      padding:11px 15px;border-radius:14px;font-size:13.5px;line-height:1.65;
+    }
+    .row.user .bubble{
+      background:linear-gradient(135deg,#3D3580,#4A3DAA);
+      border:1px solid rgba(90,46,240,.35);border-bottom-right-radius:3px;
+    }
+    .row.bot .bubble{
+      background:var(--card);border:1px solid var(--border);
+      border-bottom-left-radius:3px;
+    }
+    .bubble.err{background:rgba(255,77,109,.1);border-color:rgba(255,77,109,.3);color:#FF9EB3}
+    .ts{font-size:10px;color:var(--muted);margin-top:3px;padding:0 4px}
+    .row.user .ts{text-align:right}
+
+    /* ── TYPING ── */
+    .typing{display:flex;align-items:center;gap:5px;padding:12px 14px}
+    .td{width:7px;height:7px;background:var(--accent);border-radius:50%;animation:bop 1.4s infinite}
+    .td:nth-child(2){animation-delay:.2s}.td:nth-child(3){animation-delay:.4s}
+    @keyframes bop{0%,80%,100%{transform:translateY(0)}40%{transform:translateY(-8px)}}
+    .typing-label{font-size:12px;color:var(--muted);margin-left:4px}
+
+    /* ── EVENT GRID ── */
+    .ev-grid{
+      display:grid;
+      grid-template-columns:repeat(auto-fill,minmax(240px,1fr));
+      gap:11px;margin-top:8px;width:100%;
+    }
+    .ev-card{
+      background:linear-gradient(145deg,rgba(13,32,69,.95),rgba(10,22,40,1));
+      border:1px solid var(--border);border-radius:13px;overflow:hidden;
+      transition:transform .2s,box-shadow .2s,border-color .2s;
+    }
+    .ev-card:hover{transform:translateY(-3px);box-shadow:0 8px 28px rgba(0,195,255,.15);border-color:rgba(0,195,255,.35)}
+    .ev-thumb{
+      width:100%;height:130px;position:relative;overflow:hidden;
+      background:linear-gradient(135deg,var(--mid),var(--blue));
+      display:flex;align-items:center;justify-content:center;font-size:38px;
+    }
+    .ev-thumb img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover}
+    .ev-badge{
+      position:absolute;top:7px;left:7px;
+      background:rgba(0,0,0,.65);border:1px solid rgba(255,255,255,.15);
+      border-radius:6px;padding:2px 8px;font-size:10px;font-weight:700;
+      color:var(--accent);backdrop-filter:blur(4px);
+    }
+    .ev-body{padding:11px 13px}
+    .ev-name{font-size:13px;font-weight:700;line-height:1.3;margin-bottom:5px;
+      display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+    .ev-meta{font-size:11.5px;color:var(--muted);margin-bottom:2px;display:flex;align-items:center;gap:4px}
+    .ev-price{font-size:12.5px;font-weight:700;color:var(--green);margin:7px 0}
+    .ev-acts{display:flex;gap:6px;margin-top:9px}
+    .btn-buy{
+      flex:1;background:linear-gradient(135deg,var(--blue),#0250B0);
+      border:none;border-radius:8px;color:#fff;font-size:11.5px;font-weight:600;
+      padding:6px 8px;cursor:pointer;text-decoration:none;
+      display:flex;align-items:center;justify-content:center;gap:3px;
+      transition:opacity .2s;
+    }
+    .btn-buy:hover{opacity:.82}
+    .btn-wa{
+      background:var(--wa);border:none;border-radius:8px;
+      color:#fff;font-size:11.5px;font-weight:600;
+      padding:6px 9px;cursor:pointer;display:flex;align-items:center;gap:3px;
+      text-decoration:none;transition:opacity .2s;
+    }
+    .btn-wa:hover{opacity:.82}
+
+    /* ── RESULTS HEADER ── */
+    .res-hdr{display:flex;align-items:center;justify-content:space-between;margin-bottom:9px}
+    .res-count{font-size:12.5px;color:var(--muted)}
+    .res-count strong{color:var(--accent)}
+    .btn-wa-all{
+      background:var(--wa);border:none;border-radius:8px;
+      color:#fff;font-size:12px;font-weight:600;
+      padding:5px 11px;cursor:pointer;display:flex;align-items:center;gap:4px;
+      text-decoration:none;transition:opacity .2s;
+    }
+    .btn-wa-all:hover{opacity:.82}
+
+    /* ── INPUT ── */
+    #inputarea{
+      flex-shrink:0;padding:12px 18px;
+      background:linear-gradient(0deg,var(--bg),rgba(10,22,40,.96));
+      border-top:1px solid var(--border);
+    }
+    #inputrow{
+      display:flex;align-items:center;gap:9px;
+      background:rgba(255,255,255,.05);border:1px solid var(--border);
+      border-radius:13px;padding:5px 7px 5px 15px;transition:border-color .2s;
+    }
+    #inputrow:focus-within{border-color:var(--blue)}
+    #msginput{
+      flex:1;background:none;border:none;outline:none;
+      color:var(--text);font-size:13.5px;
+    }
+    #msginput::placeholder{color:var(--muted)}
+    #sendbtn{
+      background:linear-gradient(135deg,var(--blue),var(--accent));
+      border:none;border-radius:9px;width:36px;height:36px;
+      display:flex;align-items:center;justify-content:center;
+      cursor:pointer;font-size:15px;flex-shrink:0;transition:opacity .2s,transform .1s;
+    }
+    #sendbtn:hover{opacity:.82;transform:scale(1.06)}
+    #sendbtn:disabled{opacity:.35;cursor:default}
+    #hint{font-size:11px;color:var(--muted);text-align:center;margin-top:6px}
+
+    /* ── MODAL ── */
+    .overlay{
+      position:fixed;inset:0;background:rgba(0,0,0,.72);
+      backdrop-filter:blur(6px);display:flex;align-items:center;justify-content:center;z-index:100;
+    }
+    .modal{
+      background:linear-gradient(145deg,var(--mid),var(--bg));
+      border:1px solid var(--border);border-radius:18px;
+      width:470px;max-width:96vw;max-height:90vh;
+      display:flex;flex-direction:column;overflow:hidden;
+    }
+    .modal-header{padding:20px 24px 0;flex-shrink:0}
+    .modal-header h2{font-size:17px;margin-bottom:14px}
+    .modal-body{padding:0 24px 4px;overflow-y:auto;flex:1}
+    .modal-body::-webkit-scrollbar{width:4px}
+    .modal-body::-webkit-scrollbar-thumb{background:var(--border);border-radius:2px}
+    .modal-footer{padding:14px 24px 18px;flex-shrink:0;border-top:1px solid var(--border);display:flex;gap:9px;justify-content:flex-end}
+
+    /* ── MODAL TABS ── */
+    .modal-tabs{display:flex;gap:4px;margin-bottom:18px;background:rgba(255,255,255,.04);border-radius:10px;padding:4px}
+    .mtab{flex:1;padding:8px;border:none;border-radius:7px;background:transparent;color:var(--muted);font-size:13px;font-weight:500;cursor:pointer;transition:all .2s;display:flex;align-items:center;justify-content:center;gap:5px}
+    .mtab.active{background:var(--blue);color:#fff;font-weight:600}
+    .mtab:not(.active):hover{background:rgba(255,255,255,.07);color:var(--text)}
+    .tab-panel{display:none}.tab-panel.active{display:block}
+
+    .flabel{font-size:11px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;display:block;margin-bottom:5px}
+    .finput{width:100%;background:rgba(255,255,255,.05);border:1px solid var(--border);border-radius:8px;color:var(--text);font-size:13.5px;padding:9px 13px;outline:none;transition:border-color .2s}
+    .finput:focus{border-color:var(--blue)}
+    .macts{display:flex;gap:9px;margin-top:18px;justify-content:flex-end}
+    .mbtn{background:linear-gradient(135deg,var(--blue),var(--accent));border:none;border-radius:8px;color:#fff;font-size:13.5px;font-weight:600;padding:9px 20px;cursor:pointer;transition:opacity .2s}
+    .mbtn:hover{opacity:.82}
+    .mbtn2{background:rgba(255,255,255,.07);border:1px solid var(--border);border-radius:8px;color:var(--text);font-size:13.5px;padding:9px 16px;cursor:pointer;transition:background .2s}
+    .mbtn2:hover{background:rgba(255,255,255,.13)}
+
+    /* ── THEME SWATCHES ── */
+    .theme-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-bottom:18px}
+    .theme-swatch{border-radius:10px;overflow:hidden;cursor:pointer;border:2px solid transparent;transition:all .2s;position:relative}
+    .theme-swatch:hover{transform:translateY(-2px);box-shadow:0 6px 20px rgba(0,0,0,.35)}
+    .theme-swatch.selected{border-color:var(--accent);box-shadow:0 0 0 3px rgba(0,195,255,.2)}
+    .swatch-preview{height:44px;width:100%;display:flex;align-items:center;justify-content:center;gap:4px;padding:6px}
+    .sw-dot{width:12px;height:12px;border-radius:50%;flex-shrink:0}
+    .swatch-label{padding:5px 6px;font-size:10px;font-weight:600;text-align:center;line-height:1.3;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+    .swatch-check{position:absolute;top:4px;right:4px;width:15px;height:15px;background:var(--accent);border-radius:50%;display:none;align-items:center;justify-content:center;font-size:8px;color:#000;font-weight:900}
+    .theme-swatch.selected .swatch-check{display:flex}
+
+    /* ── CUSTOM COLOR PICKERS ── */
+    .color-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:16px}
+    .color-field{display:flex;flex-direction:column;gap:5px}
+    .color-row2{display:flex;align-items:center;gap:7px}
+    .color-dot{width:30px;height:30px;border-radius:7px;border:1px solid var(--border);cursor:pointer;flex-shrink:0;position:relative;overflow:hidden}
+    .color-dot input[type=color]{position:absolute;inset:-4px;opacity:0;cursor:pointer;width:calc(100%+8px);height:calc(100%+8px)}
+    .color-hex{flex:1;background:rgba(255,255,255,.05);border:1px solid var(--border);border-radius:7px;color:var(--text);font-size:12px;padding:5px 9px;outline:none;font-family:monospace;width:0}
+    .color-hex:focus{border-color:var(--blue)}
+
+    /* ── FONT SELECTOR ── */
+    .font-row{display:flex;gap:7px;flex-wrap:wrap;margin-bottom:16px}
+    .font-chip{padding:6px 13px;border-radius:8px;border:1px solid var(--border);background:rgba(255,255,255,.05);color:var(--text);font-size:12.5px;cursor:pointer;transition:all .2s}
+    .font-chip.active{background:rgba(2,108,223,.3);border-color:var(--blue);color:#fff;font-weight:600}
+    .font-chip:not(.active):hover{background:rgba(255,255,255,.09)}
+
+    /* ── BRANDING TEXT ── */
+    .brand-note{font-size:11.5px;color:var(--muted);line-height:1.6;margin-bottom:14px;padding:10px 12px;background:rgba(255,255,255,.04);border-radius:8px;border-left:3px solid var(--accent)}
+
+    /* ── NO RESULTS ── */
+    .nores{text-align:center;padding:22px;color:var(--muted);font-size:13.5px}
+    .nores .big{font-size:32px;display:block;margin-bottom:8px}
+
+    /* ── WHATSAPP SVG ── */
+    .wa-svg{width:13px;height:13px;fill:white;flex-shrink:0}
+
+    /* ── ARTIST BANNER ── */
+    .artist-banner{
+      display:flex;align-items:center;gap:14px;
+      background:linear-gradient(135deg,rgba(2,108,223,.18),rgba(0,195,255,.08));
+      border:1px solid rgba(0,195,255,.25);border-radius:12px;
+      padding:14px 16px;margin-bottom:14px;
+    }
+    .artist-thumb{
+      width:58px;height:58px;border-radius:12px;object-fit:cover;flex-shrink:0;
+      background:linear-gradient(135deg,var(--mid),var(--blue));
+      display:flex;align-items:center;justify-content:center;font-size:26px;
+    }
+    .artist-thumb img{width:100%;height:100%;border-radius:12px;object-fit:cover}
+    .artist-info{flex:1;min-width:0}
+    .artist-name{font-size:15px;font-weight:800;color:var(--text);margin-bottom:3px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+    .artist-meta{font-size:11.5px;color:var(--muted);display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+    .artist-genre-tag{
+      background:rgba(0,195,255,.12);border:1px solid rgba(0,195,255,.25);
+      border-radius:6px;padding:2px 8px;font-size:10.5px;color:var(--accent);font-weight:600;
+    }
+    .artist-not-found{
+      background:rgba(255,140,66,.08);border:1px solid rgba(255,140,66,.2);
+      border-radius:10px;padding:10px 14px;font-size:12.5px;color:#FFA060;
+      margin-bottom:12px;
+    }
+
+    /* ── SECTION DIVIDER ── */
+    .section-divider{
+      display:flex;align-items:center;gap:10px;margin:18px 0 12px;
+    }
+    .section-divider span{
+      font-size:12px;font-weight:700;color:var(--accent);white-space:nowrap;letter-spacing:.4px;text-transform:uppercase;
+    }
+    .section-divider::before,.section-divider::after{
+      content:'';flex:1;height:1px;background:var(--border);
+    }
+
+    /* ── RELATED BADGE on cards ── */
+    .related-badge{
+      position:absolute;top:7px;right:7px;
+      background:rgba(0,214,143,.15);border:1px solid rgba(0,214,143,.3);
+      border-radius:6px;padding:2px 7px;font-size:10px;font-weight:700;color:var(--green);
+      backdrop-filter:blur(4px);
+    }
+  </style>
+</head>
+<body>
+
+<!-- HEADER -->
+<div id="header">
+  <div class="logo">
+    <div class="logo-icon">🎟️</div>
+    <div>
+      <div class="logo-name">ShowSeeker</div>
+      <div class="logo-sub">Powered by Ticketmaster × Claude Haiku</div>
+    </div>
+  </div>
+  <div class="header-right">
+    <div id="locpill" class="pill" style="display:none" onclick="retryLocation()">📍 <span id="loclabel">Detecting…</span></div>
+    <button class="hbtn" id="locbtn" onclick="retryLocation()">📍 Get Location</button>
+    <span class="live-dot">Live</span>
+    <button class="hbtn" onclick="openSettings()">⚙️ Settings</button>
+  </div>
+</div>
+
+<!-- CHAT -->
+<div id="chat">
+  <div id="welcome">
+    <div class="w-icon">🎟️</div>
+    <h1>Find <span>Shows Near You</span></h1>
+    <p>Ask me about concerts, sports, comedy, theatre, or any live event. I'll search Ticketmaster and show what's on near you.</p>
+    <div class="chips" id="chips"></div>
+  </div>
+</div>
+
+<!-- INPUT -->
+<div id="inputarea">
+  <div id="inputrow">
+    <input id="msginput" type="text" placeholder='Try "concerts near me this weekend" or "sports events today"' />
+    <button id="sendbtn" onclick="sendMsg()" disabled>➤</button>
+  </div>
+  <div id="hint">Searches Ticketmaster · WhatsApp share on every event · <span id="apistatus" style="color:var(--red)">🔴 Add API Key in Settings</span></div>
+</div>
+
+<!-- SETTINGS MODAL -->
+<div class="overlay" id="settingsModal" style="display:none" onclick="if(event.target===this)closeSettings()">
+  <div class="modal">
+
+    <!-- Header + Tabs -->
+    <div class="modal-header">
+      <h2>⚙️ Settings</h2>
+      <div class="modal-tabs">
+        <button class="mtab active" id="tab-keys-btn" onclick="switchTab('keys')">🔑 API Keys</button>
+        <button class="mtab" id="tab-brand-btn" onclick="switchTab('brand')">🎨 Branding</button>
+      </div>
+    </div>
+
+    <!-- Body -->
+    <div class="modal-body">
+
+      <!-- TAB: API Keys -->
+      <div class="tab-panel active" id="tab-keys">
+        <p style="font-size:12.5px;color:var(--muted);margin-bottom:16px;line-height:1.6">
+          All keys are saved locally in your browser only. The Anthropic key enables natural language search — if unavailable, keyword search is used automatically.
+        </p>
+        <label class="flabel">🎟️ Ticketmaster API Key <span style="color:var(--red);font-size:10px;text-transform:none">(required)</span></label>
+        <input class="finput" type="password" id="apikeyinput" placeholder="developer.ticketmaster.com" style="margin-bottom:14px"/>
+
+        <label class="flabel">🟣 Anthropic API Key <span style="color:var(--green);font-size:10px;text-transform:none;font-weight:400">— Claude Haiku (optional)</span></label>
+        <input class="finput" type="password" id="antkeyinput" placeholder="console.anthropic.com"/>
+      </div>
+
+      <!-- TAB: Branding -->
+      <div class="tab-panel" id="tab-brand">
+        <div class="brand-note">Changes apply live instantly — no need to reload. Your theme is saved in the browser and persists across sessions.</div>
+
+        <!-- Preset themes -->
+        <label class="flabel" style="margin-bottom:10px">🎨 Preset Themes</label>
+        <div class="theme-grid" id="themeGrid"></div>
+
+        <!-- Custom colors -->
+        <label class="flabel" style="margin-bottom:10px">✏️ Custom Colors</label>
+        <div class="color-grid">
+          <div class="color-field">
+            <label class="flabel" style="font-size:10px">Background</label>
+            <div class="color-row2">
+              <div class="color-dot" id="dot-bg" style="background:#0A1628"><input type="color" id="pick-bg" value="#0A1628" oninput="onColorPick('bg',this.value)"></div>
+              <input class="color-hex" id="hex-bg" value="#0A1628" maxlength="7" oninput="onHexType('bg',this.value)"/>
+            </div>
+          </div>
+          <div class="color-field">
+            <label class="flabel" style="font-size:10px">Card / Surface</label>
+            <div class="color-row2">
+              <div class="color-dot" id="dot-mid" style="background:#0D2045"><input type="color" id="pick-mid" value="#0D2045" oninput="onColorPick('mid',this.value)"></div>
+              <input class="color-hex" id="hex-mid" value="#0D2045" maxlength="7" oninput="onHexType('mid',this.value)"/>
+            </div>
+          </div>
+          <div class="color-field">
+            <label class="flabel" style="font-size:10px">Primary Action</label>
+            <div class="color-row2">
+              <div class="color-dot" id="dot-blue" style="background:#026CDF"><input type="color" id="pick-blue" value="#026CDF" oninput="onColorPick('blue',this.value)"></div>
+              <input class="color-hex" id="hex-blue" value="#026CDF" maxlength="7" oninput="onHexType('blue',this.value)"/>
+            </div>
+          </div>
+          <div class="color-field">
+            <label class="flabel" style="font-size:10px">Accent / Highlight</label>
+            <div class="color-row2">
+              <div class="color-dot" id="dot-accent" style="background:#00C3FF"><input type="color" id="pick-accent" value="#00C3FF" oninput="onColorPick('accent',this.value)"></div>
+              <input class="color-hex" id="hex-accent" value="#00C3FF" maxlength="7" oninput="onHexType('accent',this.value)"/>
+            </div>
+          </div>
+          <div class="color-field">
+            <label class="flabel" style="font-size:10px">Main Text</label>
+            <div class="color-row2">
+              <div class="color-dot" id="dot-text" style="background:#E8F4FF"><input type="color" id="pick-text" value="#E8F4FF" oninput="onColorPick('text',this.value)"></div>
+              <input class="color-hex" id="hex-text" value="#E8F4FF" maxlength="7" oninput="onHexType('text',this.value)"/>
+            </div>
+          </div>
+          <div class="color-field">
+            <label class="flabel" style="font-size:10px">Muted Text</label>
+            <div class="color-row2">
+              <div class="color-dot" id="dot-muted" style="background:#7A9BC4"><input type="color" id="pick-muted" value="#7A9BC4" oninput="onColorPick('muted',this.value)"></div>
+              <input class="color-hex" id="hex-muted" value="#7A9BC4" maxlength="7" oninput="onHexType('muted',this.value)"/>
+            </div>
+          </div>
+        </div>
+
+        <!-- Font -->
+        <label class="flabel" style="margin-bottom:8px">🔤 Font Style</label>
+        <div class="font-row" id="fontRow"></div>
+
+        <!-- App name -->
+        <label class="flabel" style="margin-bottom:5px">📝 App Name</label>
+        <input class="finput" id="appNameInput" placeholder="ShowSeeker" maxlength="32" oninput="onAppNameChange(this.value)" style="margin-bottom:4px"/>
+
+        <button onclick="resetTheme()" style="margin-top:10px;background:none;border:1px solid var(--border);border-radius:8px;color:var(--muted);font-size:12px;padding:6px 14px;cursor:pointer;width:100%;transition:all .2s" onmouseover="this.style.borderColor='var(--red)';this.style.color='var(--red)'" onmouseout="this.style.borderColor='var(--border)';this.style.color='var(--muted)'">↺ Reset to Default Theme</button>
+      </div>
+
+    </div><!-- /modal-body -->
+
+    <!-- Footer -->
+    <div class="modal-footer">
+      <button class="mbtn2" onclick="closeSettings()">Close</button>
+      <button class="mbtn" onclick="saveSettings()">Save API Keys</button>
+    </div>
+
+  </div>
+</div>
+
+<script>
+/* ═══════════════════════════════════════════════════════
+   STATE
+═══════════════════════════════════════════════════════ */
+let apiKey       = '';
+let anthropicKey = '';
+let userLat      = null;
+let userLng      = null;
+let userCity     = '';
+let isLoading    = false;
+
+const SUGGESTIONS = [
+  'Concerts near me 🎵',
+  'Sports events this week ⚽',
+  'Family shows this month 👨‍👩‍👧',
+  'Comedy shows near me 😂',
+  'Theatre & Arts nearby 🎭',
+  'All events today 🎉',
+];
+
+const CAT_EMOJI = {
+  'Music':'🎵','Sports':'⚽','Arts & Theatre':'🎭',
+  'Family':'👨‍👩‍👧','Comedy':'😂','Film':'🎬','Miscellaneous':'🎪'
+};
+
+/* ═══════════════════════════════════════════════════════
+   THEME ENGINE
+═══════════════════════════════════════════════════════ */
+const THEMES = [
+  { id:'ticketmaster', name:'TM Blue',    bg:'#0A1628', mid:'#0D2045', blue:'#026CDF', accent:'#00C3FF', text:'#E8F4FF', muted:'#7A9BC4' },
+  { id:'purple',       name:'Purple Night',bg:'#0D0A1A', mid:'#1A1035', blue:'#7C3AED', accent:'#A78BFA', text:'#EDE9FE', muted:'#8B7CC8' },
+  { id:'emerald',      name:'Emerald',     bg:'#0A1A12', mid:'#0D2B1A', blue:'#059669', accent:'#34D399', text:'#ECFDF5', muted:'#6EE7B7' },
+  { id:'crimson',      name:'Crimson',     bg:'#1A0A0D', mid:'#2D0F15', blue:'#DC2626', accent:'#F87171', text:'#FEF2F2', muted:'#FCA5A5' },
+  { id:'gold',         name:'Midnight Gold',bg:'#0F0E0A',mid:'#1C1A0F', blue:'#D97706', accent:'#FCD34D', text:'#FFFBEB', muted:'#92400E' },
+  { id:'ocean',        name:'Ocean Teal',  bg:'#0A1A1A', mid:'#0D2B2B', blue:'#0891B2', accent:'#22D3EE', text:'#ECFEFF', muted:'#67E8F9' },
+  { id:'rose',         name:'Rose Pink',   bg:'#1A0A12', mid:'#2D1020', blue:'#DB2777', accent:'#F472B6', text:'#FDF2F8', muted:'#F9A8D4' },
+  { id:'light',        name:'Clean Light', bg:'#F0F4F8', mid:'#FFFFFF', blue:'#2563EB', accent:'#3B82F6', text:'#1E293B', muted:'#64748B' },
+];
+
+const FONTS = [
+  { id:'system',  label:'System UI',  value:"'Segoe UI',system-ui,sans-serif" },
+  { id:'inter',   label:'Inter',      value:"'Inter',sans-serif" },
+  { id:'mono',    label:'Monospace',  value:"'Courier New',monospace" },
+  { id:'serif',   label:'Serif',      value:"Georgia,serif" },
+];
+
+let activeThemeId  = 'ticketmaster';
+let activeFontId   = 'system';
+let customColors   = {}; // tracks any custom picks
+
+function applyTheme(t, save = true) {
+  const r = document.documentElement;
+  r.style.setProperty('--bg',    t.bg);
+  r.style.setProperty('--mid',   t.mid);
+  r.style.setProperty('--blue',  t.blue);
+  r.style.setProperty('--accent',t.accent);
+  r.style.setProperty('--text',  t.text);
+  r.style.setProperty('--muted', t.muted);
+  // Derived vars
+  r.style.setProperty('--card',   hexToRgba(t.mid, 0.9));
+  r.style.setProperty('--border', hexToRgba(t.accent, 0.15));
+
+  // Sync pickers
+  const fields = ['bg','mid','blue','accent','text','muted'];
+  fields.forEach(f => {
+    const v = t[f];
+    const dot  = document.getElementById('dot-'+f);
+    const pick = document.getElementById('pick-'+f);
+    const hex  = document.getElementById('hex-'+f);
+    if (dot)  dot.style.background = v;
+    if (pick) pick.value = v;
+    if (hex)  hex.value  = v;
+  });
+
+  // Mark selected swatch
+  document.querySelectorAll('.theme-swatch').forEach(s => s.classList.remove('selected'));
+  const sel = document.getElementById('swatch-'+t.id);
+  if (sel) sel.classList.add('selected');
+  activeThemeId = t.id || 'custom';
+
+  if (save) {
+    try { localStorage.setItem('ss_theme', JSON.stringify(t)); } catch(e){}
+  }
+}
+
+function applyFont(fontId, save = true) {
+  const f = FONTS.find(x => x.id === fontId) || FONTS[0];
+  document.body.style.fontFamily = f.value;
+  activeFontId = fontId;
+  document.querySelectorAll('.font-chip').forEach(c => {
+    c.classList.toggle('active', c.dataset.font === fontId);
+  });
+  if (save) { try { localStorage.setItem('ss_font', fontId); } catch(e){} }
+}
+
+function onColorPick(field, hex) {
+  document.documentElement.style.setProperty('--'+field, hex);
+  const hexInput = document.getElementById('hex-'+field);
+  const dot      = document.getElementById('dot-'+field);
+  if (hexInput) hexInput.value = hex;
+  if (dot)      dot.style.background = hex;
+  // Deselect preset, mark as custom
+  document.querySelectorAll('.theme-swatch').forEach(s => s.classList.remove('selected'));
+  activeThemeId = 'custom';
+  // Save custom color
+  const saved = getCurrentColors(); saved[field] = hex;
+  try { localStorage.setItem('ss_theme', JSON.stringify({id:'custom', ...saved})); } catch(e){}
+}
+
+function onHexType(field, val) {
+  if (/^#[0-9a-fA-F]{6}$/.test(val)) {
+    document.getElementById('pick-'+field).value = val;
+    onColorPick(field, val);
+  }
+}
+
+function onAppNameChange(val) {
+  const name = val.trim() || 'ShowSeeker';
+  document.querySelector('.logo-name').textContent = name;
+  document.title = name + ' — Events Near You';
+  try { localStorage.setItem('ss_appname', name); } catch(e){}
+}
+
+function getCurrentColors() {
+  const r = getComputedStyle(document.documentElement);
+  return {
+    bg:     r.getPropertyValue('--bg').trim(),
+    mid:    r.getPropertyValue('--mid').trim(),
+    blue:   r.getPropertyValue('--blue').trim(),
+    accent: r.getPropertyValue('--accent').trim(),
+    text:   r.getPropertyValue('--text').trim(),
+    muted:  r.getPropertyValue('--muted').trim(),
+  };
+}
+
+function resetTheme() {
+  const def = THEMES[0];
+  applyTheme(def);
+  applyFont('system');
+  const nameInput = document.getElementById('appNameInput');
+  if (nameInput) { nameInput.value = 'ShowSeeker'; onAppNameChange('ShowSeeker'); }
+  try { localStorage.removeItem('ss_theme'); localStorage.removeItem('ss_font'); localStorage.removeItem('ss_appname'); } catch(e){}
+}
+
+function hexToRgba(hex, alpha) {
+  const r = parseInt(hex.slice(1,3),16);
+  const g = parseInt(hex.slice(3,5),16);
+  const b = parseInt(hex.slice(5,7),16);
+  return `rgba(${r},${g},${b},${alpha})`;
+}
+
+function buildThemeUI() {
+  // Swatches
+  const grid = document.getElementById('themeGrid');
+  if (grid) {
+    THEMES.forEach(t => {
+      const sw = document.createElement('div');
+      sw.className = 'theme-swatch' + (t.id === activeThemeId ? ' selected' : '');
+      sw.id = 'swatch-' + t.id;
+      sw.onclick = () => applyTheme(t);
+      sw.innerHTML = `
+        <div class="swatch-preview" style="background:${t.bg}">
+          <div class="sw-dot" style="background:${t.blue}"></div>
+          <div class="sw-dot" style="background:${t.accent}"></div>
+          <div class="sw-dot" style="background:${t.text}"></div>
+        </div>
+        <div class="swatch-label" style="background:${t.mid};color:${t.text}">${t.name}</div>
+        <div class="swatch-check">✓</div>`;
+      grid.appendChild(sw);
+    });
+  }
+
+  // Font chips
+  const fontRow = document.getElementById('fontRow');
+  if (fontRow) {
+    FONTS.forEach(f => {
+      const chip = document.createElement('button');
+      chip.className = 'font-chip' + (f.id === activeFontId ? ' active' : '');
+      chip.dataset.font = f.id;
+      chip.style.fontFamily = f.value;
+      chip.textContent = f.label;
+      chip.onclick = () => applyFont(f.id);
+      fontRow.appendChild(chip);
+    });
+  }
+}
+
+function loadSavedTheme() {
+  try {
+    const saved = localStorage.getItem('ss_theme');
+    if (saved) {
+      const t = JSON.parse(saved);
+      // Re-match to preset if id matches, else apply custom colors
+      const preset = THEMES.find(x => x.id === t.id);
+      applyTheme(preset || t, false);
+    }
+    const font = localStorage.getItem('ss_font');
+    if (font) applyFont(font, false);
+    const name = localStorage.getItem('ss_appname');
+    if (name) onAppNameChange(name);
+  } catch(e){}
+}
+
+/* ── Tab switcher ── */
+function switchTab(tab) {
+  ['keys','brand'].forEach(t => {
+    document.getElementById('tab-'+t).classList.toggle('active', t===tab);
+    document.getElementById('tab-'+t+'-btn').classList.toggle('active', t===tab);
+  });
+  // Populate app name field when switching to brand tab
+  if (tab === 'brand') {
+    const ni = document.getElementById('appNameInput');
+    if (ni && !ni.value) ni.value = document.querySelector('.logo-name')?.textContent || 'ShowSeeker';
+  }
+}
+
+/* ═══════════════════════════════════════════════════════
+   INIT
+═══════════════════════════════════════════════════════ */
+window.addEventListener('DOMContentLoaded', () => {
+  // Load saved keys
+  try {
+    apiKey       = localStorage.getItem('ss_key') || '';
+    anthropicKey = localStorage.getItem('ss_ant') || '';
+  } catch(e){}
+
+  // Load saved theme + build branding UI
+  loadSavedTheme();
+  buildThemeUI();
+
+  // Build chips
+  const chips = document.getElementById('chips');
+  SUGGESTIONS.forEach(s => {
+    const b = document.createElement('button');
+    b.className = 'chip'; b.textContent = s;
+    b.onclick = () => sendMsg(s);
+    chips.appendChild(b);
+  });
+
+  // Input enable
+  document.getElementById('msginput').addEventListener('input', e => {
+    document.getElementById('sendbtn').disabled = !e.target.value.trim();
+  });
+  document.getElementById('msginput').addEventListener('keydown', e => {
+    if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendMsg(); }
+  });
+
+  if (!apiKey) {
+    openSettings();
+  } else {
+    updateApiStatus();
+    detectLocation();
+  }
+});
+
+/* ═══════════════════════════════════════════════════════
+   SETTINGS
+═══════════════════════════════════════════════════════ */
+function openSettings() {
+  document.getElementById('apikeyinput').value = apiKey;
+  document.getElementById('antkeyinput').value = anthropicKey;
+  document.getElementById('settingsModal').style.display = 'flex';
+  setTimeout(() => document.getElementById('apikeyinput').focus(), 100);
+}
+function closeSettings() {
+  document.getElementById('settingsModal').style.display = 'none';
+}
+function saveSettings() {
+  const k   = document.getElementById('apikeyinput').value.trim();
+  const ant = document.getElementById('antkeyinput').value.trim();
+  if (!k) { document.getElementById('apikeyinput').style.borderColor='var(--red)'; return; }
+  apiKey       = k;
+  anthropicKey = ant;
+  try {
+    localStorage.setItem('ss_key', k);
+    if (ant) localStorage.setItem('ss_ant', ant); else localStorage.removeItem('ss_ant');
+  } catch(e){}
+  closeSettings();
+  updateApiStatus();
+  if (!userLat && !userCity) detectLocation();
+}
+function updateApiStatus() {
+  const el = document.getElementById('apistatus');
+  if (!apiKey) {
+    el.textContent = '🔴 Add Ticketmaster key in Settings';
+    el.style.color = 'var(--red)';
+  } else if (anthropicKey) {
+    el.textContent = '🟢 Ticketmaster · Claude Haiku · regex fallback';
+    el.style.color = 'var(--green)';
+  } else {
+    el.textContent = '🟡 Ticketmaster only · add Anthropic key for smarter search';
+    el.style.color = '#FF8C42';
+  }
+}
+
+/* ═══════════════════════════════════════════════════════
+   LOCATION
+═══════════════════════════════════════════════════════ */
+function retryLocation() { detectLocation(); }
+
+function detectLocation() {
+  const btn = document.getElementById('locbtn');
+  btn.textContent = '⏳ Detecting…'; btn.disabled = true;
+
+  if (!navigator.geolocation) {
+    btn.textContent = '📍 Get Location'; btn.disabled = false;
+    addBotMsg("Your browser doesn't support location. Include a city in your query, e.g. \"concerts in Mumbai\".");
+    return;
+  }
+
+  navigator.geolocation.getCurrentPosition(
+    async pos => {
+      userLat = pos.coords.latitude;
+      userLng = pos.coords.longitude;
+      btn.style.display = 'none';
+
+      let label = `${userLat.toFixed(2)}, ${userLng.toFixed(2)}`;
+      try {
+        const r = await fetch(`https://nominatim.openstreetmap.org/reverse?lat=${userLat}&lon=${userLng}&format=json`);
+        const d = await r.json();
+        label = d.address?.city || d.address?.town || d.address?.suburb || d.address?.county || label;
+      } catch(e){}
+
+      userCity = label;
+      const pill = document.getElementById('locpill');
+      document.getElementById('loclabel').textContent = label;
+      pill.style.display = 'flex';
+
+      hideWelcome();
+      addBotMsg(`📍 Location set to <strong>${label}</strong>. Ask me to find events — try one of the suggestions below or type your own!`, false, null, SUGGESTIONS.slice(0,3));
+    },
+    () => {
+      btn.textContent = '📍 Get Location'; btn.disabled = false;
+      addBotMsg("Couldn't auto-detect location. Include a city in your search, e.g. <strong>\"concerts in Delhi\"</strong> or <strong>\"shows in New York\"</strong>.");
+    },
+    { timeout: 9000 }
+  );
+}
+
+/* ═══════════════════════════════════════════════════════
+   FALLBACK REGEX PARSER (used when no OpenAI key set)
+═══════════════════════════════════════════════════════ */
+// US state name → code map for regex fallback
+const STATE_CODES = {
+  'alabama':'AL','alaska':'AK','arizona':'AZ','arkansas':'AR','california':'CA',
+  'colorado':'CO','connecticut':'CT','delaware':'DE','florida':'FL','georgia':'GA',
+  'hawaii':'HI','idaho':'ID','illinois':'IL','indiana':'IN','iowa':'IA','kansas':'KS',
+  'kentucky':'KY','louisiana':'LA','maine':'ME','maryland':'MD','massachusetts':'MA',
+  'michigan':'MI','minnesota':'MN','mississippi':'MS','missouri':'MO','montana':'MT',
+  'nebraska':'NE','nevada':'NV','new hampshire':'NH','new jersey':'NJ','new mexico':'NM',
+  'new york':'NY','north carolina':'NC','north dakota':'ND','ohio':'OH','oklahoma':'OK',
+  'oregon':'OR','pennsylvania':'PA','rhode island':'RI','south carolina':'SC',
+  'south dakota':'SD','tennessee':'TN','texas':'TX','utah':'UT','vermont':'VT',
+  'virginia':'VA','washington':'WA','west virginia':'WV','wisconsin':'WI','wyoming':'WY'
+};
+
+function parseQueryFallback(text) {
+  const t = text.toLowerCase();
+  const r = { intent:'search_events', artist:null, keyword:null, genre:null, days:30, city:null, stateCode:null, reply:'' };
+
+  // Genre
+  if (/concert|music|band|live music|rock|pop|hip.?hop|jazz|edm|country|r&b/.test(t)) r.genre='Music';
+  else if (/sport|football|basketball|baseball|soccer|hockey|nba|nfl|cricket|tennis/.test(t)) r.genre='Sports';
+  else if (/comedy|stand.?up|comedian/.test(t)) { r.genre='Arts & Theatre'; r.keyword='comedy'; }
+  else if (/theatre|theater|broadway|musical|opera|ballet|dance/.test(t)) r.genre='Arts & Theatre';
+  else if (/family|kids|children/.test(t)) r.genre='Family';
+
+  // Time
+  if      (/\btoday\b/.test(t))         r.days = 1;
+  else if (/\btomorrow\b/.test(t))      r.days = 2;
+  else if (/this week|weekend/.test(t)) r.days = 7;
+  else if (/next week/.test(t))         r.days = 14;
+  else if (/this month|month/.test(t))  r.days = 30;
+  else if (/next year|year/.test(t))    r.days = 365;
+
+  // State code (2-letter or full name)
+  const sc = t.match(/\bin\s+([a-z]{2})\b/);
+  if (sc && Object.values(STATE_CODES).map(c=>c.toLowerCase()).includes(sc[1])) {
+    r.stateCode = sc[1].toUpperCase();
+  } else {
+    for (const [name, code] of Object.entries(STATE_CODES)) {
+      if (t.includes(name)) { r.stateCode = code; break; }
+    }
+  }
+
+  // City
+  const cm = t.match(/\bin\s+([a-z][a-z\s]{2,20}?)(?:\s+this|\s+next|\s+today|\s+tonight|\s+shows?|\s+events?|$)/);
+  if (cm) {
+    const candidate = cm[1].trim();
+    // Don't use it as city if it matched a state name
+    const isState = Object.keys(STATE_CODES).some(s => s === candidate);
+    if (!isState) r.city = candidate;
+  }
+
+  // Artist: "of X", "by X", "X concert/tour/show", "X tickets"
+  const am = t.match(/(?:of|by|for|artist|singer|band)\s+([a-z][a-z\s&']{2,30}?)(?:\s+concert|\s+tour|\s+show|\s+tickets?|\s+near|\s+in\s|$)/i);
+  if (am) r.artist = am[1].trim();
+
+  // Keyword fallback
+  if (!r.artist) {
+    const km = t.match(/(?:tickets?\s+for|search\s+for|find)\s+(.+?)(?:\s+near|\s+in\s|\s+concert|\s+show|$)/i);
+    if (km) r.keyword = km[1].trim().replace(/^for\s+/i,'');
+  }
+
+  return r;
+}
+
+/* ═══════════════════════════════════════════════════════
+   ANTHROPIC CLAUDE HAIKU INTENT EXTRACTION
+═══════════════════════════════════════════════════════ */
+async function getAnthropicIntent(userMessage) {
+  const locationContext = userCity
+    ? `The user's current detected location is: ${userCity}.`
+    : 'The user has not yet shared their location.';
+  const today = new Date().toLocaleDateString('en-US', { weekday:'long', year:'numeric', month:'long', day:'numeric' });
+
+  const systemPrompt = `You are ShowSeeker, a friendly AI assistant that helps users discover live events and shows powered by Ticketmaster.
+Today's date is ${today}. ${locationContext}
+
+When the user sends a message, respond with ONLY a valid JSON object — no extra text, no markdown, no code fences. Use this exact schema:
+{
+  "intent": "search_events" | "greeting" | "help" | "chitchat" | "unclear",
+  "artist": "exact artist, band, or performer name if user is asking about a specific person/group, otherwise null",
+  "genre": "Music" | "Sports" | "Arts & Theatre" | "Family" | null,
+  "keyword": "non-artist search term (event name, team name, show title), otherwise null",
+  "days": <number: 1=today, 2=tomorrow, 7=this week/weekend, 14=next week, 30=this month, 90=next 3 months, 365=next year>,
+  "city": "city name if explicitly mentioned, otherwise null",
+  "stateCode": "2-letter US state code if state is mentioned (e.g. CA, NY, TX, IL), otherwise null",
+  "reply": "A warm 1-2 sentence response. For artist searches say something like 'On it! Searching for [artist] shows near you…'. For location searches mention the city/state. Always be enthusiastic."
+}
+
+Rules:
+- "artist" = ONLY real human performers, bands, musicians, comedians, solo artists (Taylor Swift, Coldplay, Ed Sheeran, BTS, Drake, etc.)
+- "keyword" = everything else: exhibition names, museum shows, venue names, event titles, sports teams, tour names, show titles (Balloon Museum, Hamilton, UFC Fight Night, Lakers, Cirque du Soleil, etc.)
+- NEVER put a place, museum, exhibition, venue, or non-human entity in "artist"
+- "near me" with no city = set city and stateCode to null (GPS will be used)
+- If user says both artist AND location, fill both artist and city/stateCode
+- For sports teams, put team name in "keyword", set genre to "Sports"
+- Always return valid JSON with all fields present (use null for missing ones)`;
+
+  const res = await fetch('https://api.anthropic.com/v1/messages', {
+    method: 'POST',
+    headers: {
+      'Content-Type':                          'application/json',
+      'x-api-key':                             anthropicKey,
+      'anthropic-version':                     '2023-06-01',
+      'anthropic-dangerous-direct-browser-access': 'true'
+    },
+    body: JSON.stringify({
+      model:      'claude-haiku-4-5-20251001',
+      max_tokens: 350,
+      system:     systemPrompt,
+      messages:   [{ role: 'user', content: userMessage }]
+    })
+  });
+
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error(`Anthropic error: ${err?.error?.message || res.status}`);
+  }
+
+  const data = await res.json();
+  const raw  = data.content?.[0]?.text || '{}';
+  // Strip accidental markdown code fences
+  const clean = raw.replace(/^```json?\s*/i,'').replace(/\s*```$/,'').trim();
+  const parsed = JSON.parse(clean);
+
+  // Sanitize: Claude sometimes returns the string "null" instead of actual null
+  const sanitize = v => (!v || v === 'null' || v === 'undefined' || v === 'none') ? null : String(v).trim();
+  return {
+    intent:    parsed.intent    || 'search_events',
+    artist:    sanitize(parsed.artist),
+    genre:     sanitize(parsed.genre),
+    keyword:   sanitize(parsed.keyword),
+    days:      (typeof parsed.days === 'number' && parsed.days > 0) ? parsed.days : 30,
+    city:      sanitize(parsed.city),
+    stateCode: sanitize(parsed.stateCode),
+    reply:     parsed.reply || ''
+  };
+}
+
+/* ═══════════════════════════════════════════════════════
+   TICKETMASTER API — SHARED LOCATION HELPER
+═══════════════════════════════════════════════════════ */
+function applyLocation(p, intent, radiusMiles = 100) {
+  if (intent.city) {
+    p.set('city', intent.city);
+    if (intent.stateCode) p.set('stateCode', intent.stateCode);
+  } else if (intent.stateCode) {
+    p.set('stateCode', intent.stateCode);
+    p.set('countryCode', 'US');
+  } else if (userLat && userLng) {
+    p.set('latlong', `${userLat},${userLng}`);
+    p.set('radius', String(radiusMiles));
+    p.set('unit', 'miles');
+  } else if (userCity) {
+    p.set('city', userCity);
+  }
+}
+
+function applyDateWindow(p, days) {
+  const safeDays = (typeof days === 'number' && days > 0) ? days : 30;
+  const now = new Date();
+  const end = new Date(now);
+  end.setDate(now.getDate() + safeDays);
+  p.set('startDateTime', now.toISOString().split('.')[0] + 'Z');
+  p.set('endDateTime',   end.toISOString().split('.')[0] + 'Z');
+}
+
+/* ── Attractions API — find artist by name ── */
+async function findAttraction(artistName) {
+  const p = new URLSearchParams({ apikey: apiKey, keyword: artistName, size: 3 });
+  const res = await fetch(`https://app.ticketmaster.com/discovery/v2/attractions.json?${p}`);
+  if (!res.ok) return null;
+  const data = await res.json();
+  const list = data._embedded?.attractions || [];
+  // Pick the best match: prefer exact name match (case-insensitive)
+  const exact = list.find(a => a.name.toLowerCase() === artistName.toLowerCase());
+  return exact || list[0] || null;
+}
+
+/* ── Events by attractionId (specific artist) ── */
+async function fetchArtistEvents(attractionId, intent) {
+  const p = new URLSearchParams({ apikey: apiKey, size: 20, sort: 'date,asc', attractionId });
+  applyLocation(p, intent, 200); // wider radius for specific artists
+  applyDateWindow(p, intent.days || 365); // full year by default for artists
+  const res = await fetch(`https://app.ticketmaster.com/discovery/v2/events.json?${p}`);
+  if (!res.ok) return [];
+  const data = await res.json();
+  return data._embedded?.events || [];
+}
+
+/* ── Related events — same genre, excluding the main artist ── */
+async function fetchRelatedEvents(intent, excludeAttractionId) {
+  if (!intent.genre) return [];
+  const p = new URLSearchParams({ apikey: apiKey, size: 8, sort: 'date,asc' });
+  p.set('classificationName', intent.genre);
+  applyLocation(p, intent, 100);
+  applyDateWindow(p, intent.days || 30);
+  if (excludeAttractionId) p.set('excludeId', excludeAttractionId); // TM may ignore this but worth sending
+  const res = await fetch(`https://app.ticketmaster.com/discovery/v2/events.json?${p}`);
+  if (!res.ok) return [];
+  const data = await res.json();
+  const events = data._embedded?.events || [];
+  // Client-side filter: exclude events where attraction matches
+  return events.filter(ev => {
+    const attractions = ev._embedded?.attractions || [];
+    return !attractions.some(a => a.id === excludeAttractionId);
+  });
+}
+
+/* ── General events search ── */
+async function fetchEvents(intent) {
+  const p = new URLSearchParams({ apikey: apiKey, size: 20, sort: 'date,asc' });
+  applyLocation(p, intent, 100);
+  if (intent.genre   && intent.genre   !== 'null') p.set('classificationName', intent.genre);
+  if (intent.keyword && intent.keyword !== 'null') p.set('keyword', intent.keyword);
+  applyDateWindow(p, intent.days);
+  const res = await fetch(`https://app.ticketmaster.com/discovery/v2/events.json?${p}`);
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error(err?.fault?.faultstring || err?.errors?.[0]?.detail || `Ticketmaster API error ${res.status}`);
+  }
+  const data = await res.json();
+  return data._embedded?.events || [];
+}
+
+/* ═══════════════════════════════════════════════════════
+   SEND MESSAGE
+═══════════════════════════════════════════════════════ */
+async function sendMsg(text) {
+  const inp = document.getElementById('msginput');
+  const q = (text || inp.value).trim();
+  if (!q) return;
+  if (!apiKey) { openSettings(); return; }
+  if (isLoading) return;
+
+  inp.value = '';
+  document.getElementById('sendbtn').disabled = true;
+  hideWelcome();
+
+  addUserMsg(q);
+  setLoading(true, anthropicKey ? '🟣 Claude is thinking…' : '🔍 Searching events…');
+
+  try {
+    let intent = null;
+    let aiUsed = 'none';
+
+    // ════════════════════════════════════════════════
+    // TIER 1 — Anthropic Claude Haiku
+    // ════════════════════════════════════════════════
+    if (anthropicKey) {
+      try {
+        setLoading(true, '🟣 Claude is thinking…');
+        intent = await getAnthropicIntent(q);
+        aiUsed = 'anthropic';
+      } catch(e1) {
+        const isQuota = /quota|rate.?limit|billing|insufficient|429|token|credit/i.test(e1.message);
+        addBotMsg(isQuota
+          ? '⚠️ Anthropic quota reached — falling back to basic keyword search…'
+          : `⚠️ Anthropic error: ${e1.message} — falling back to basic search…`
+        );
+        intent = null;
+      }
+    }
+
+    // ════════════════════════════════════════════════
+    // TIER 2 — Regex fallback (no key or Anthropic failed)
+    // ════════════════════════════════════════════════
+    if (!intent) {
+      intent = parseQueryFallback(q);
+      aiUsed = 'regex';
+      if (anthropicKey) {
+        // already notified above
+      }
+    }
+
+    // ── Handle non-search intents ──
+    if (intent.intent !== 'search_events') {
+      const defaultReplies = {
+        greeting: "Hey there! 👋 I'm ShowSeeker — ask me to find concerts, sports, comedy, theatre, or any live event near you!",
+        help:     "You can ask me things like:<br>• <strong>\"Concerts near me this weekend\"</strong><br>• <strong>\"Taylor Swift tickets in Chicago\"</strong><br>• <strong>\"Sports events today\"</strong><br>• <strong>\"Family shows this month\"</strong>",
+        chitchat: "I'm best at finding live events! Try asking about shows or concerts near you. 🎟️",
+        unclear:  "I didn't quite catch that. Try something like <strong>\"concerts near me\"</strong> or <strong>\"shows this weekend\"</strong>."
+      };
+      addBotMsg(intent.reply || defaultReplies[intent.intent] || defaultReplies.unclear);
+      setLoading(false);
+      return;
+    }
+
+    // ── Location check ──
+    if (!userLat && !userLng && !intent.city && !userCity) {
+      addBotMsg("I don't have your location yet. Click <strong>📍 Get Location</strong> in the header, or include a city like <strong>\"concerts in Mumbai\"</strong>.");
+      setLoading(false);
+      return;
+    }
+
+    // ── Show AI's conversational reply while Ticketmaster loads ──
+    if (intent.reply && aiUsed !== 'regex') {
+      setLoading(false);
+      addBotMsg(intent.reply);
+    }
+
+    // ── Build location label ──
+    const locLabel  = intent.city || (intent.stateCode ? intent.stateCode : null) || userCity || 'your area';
+    const timeLabel = intent.days===1 ? 'today' : intent.days<=2 ? 'tomorrow' : intent.days<=7 ? 'this week' : intent.days<=14 ? 'next week' : intent.days<=31 ? 'this month' : 'the next year';
+
+    // ════════════════════════════════════════════════
+    // ARTIST SEARCH PATH
+    // ════════════════════════════════════════════════
+    if (intent.artist) {
+      setLoading(true, `🔍 Looking up "${intent.artist}" on Ticketmaster…`);
+      const attraction = await findAttraction(intent.artist);
+
+      if (!attraction) {
+        // Not a known Ticketmaster performer — treat as keyword search
+        addBotMsg(`"<strong>${intent.artist}</strong>" isn't a registered artist on Ticketmaster — searching it as a keyword instead…`);
+        setLoading(true, `🔍 Keyword searching "${intent.artist}"…`);
+        const events    = await fetchEvents({ ...intent, keyword: intent.artist, artist: null });
+        const typeLabel = intent.genre ? ` ${intent.genre.toLowerCase()}` : '';
+        const summary   = `🎉 Here are<strong>${typeLabel}</strong> results for <strong>"${intent.artist}"</strong> near <strong>${locLabel}</strong>:`;
+        addEventsMsg(summary, events, q, locLabel, timeLabel, intent);
+
+      } else {
+        setLoading(true, `🎵 Fetching ${attraction.name} shows…`);
+        const artistEvents = await fetchArtistEvents(attraction.id, intent);
+
+        // Get related events in same genre
+        let relatedEvents = [];
+        const artistGenre = attraction.classifications?.[0]?.segment?.name || intent.genre;
+        if (artistGenre) {
+          setLoading(true, `🎭 Finding related ${artistGenre.toLowerCase()} shows…`);
+          relatedEvents = await fetchRelatedEvents({ ...intent, genre: artistGenre }, attraction.id);
+        }
+
+        addArtistEventsMsg(attraction, artistEvents, relatedEvents, locLabel, timeLabel, intent);
+      }
+
+    // ════════════════════════════════════════════════
+    // GENERAL SEARCH PATH
+    // ════════════════════════════════════════════════
+    } else {
+      setLoading(true, 'Fetching events from Ticketmaster…');
+      const events   = await fetchEvents(intent);
+      const typeLabel = intent.genre ? ` ${intent.genre.toLowerCase()}` : '';
+      const summary   = `🎉 Here are<strong>${typeLabel}</strong> events near <strong>${locLabel}</strong> for <strong>${timeLabel}</strong>:`;
+      addEventsMsg(summary, events, q, locLabel, timeLabel, intent);
+    }
+
+  } catch(err) {
+    addBotMsg(`❌ Ticketmaster error: ${err.message} — please check your Ticketmaster key in ⚙️ Settings.`, true);
+  }
+
+  setLoading(false);
+}
+
+/* ═══════════════════════════════════════════════════════
+   DOM HELPERS
+═══════════════════════════════════════════════════════ */
+function hideWelcome() {
+  const w = document.getElementById('welcome');
+  if (w) w.style.display = 'none';
+}
+
+function setLoading(on, label = 'Searching events…') {
+  isLoading = on;
+  const tr = document.getElementById('_typing_row');
+  if (on) {
+    if (tr) tr.remove(); // remove old one if label is changing
+    const row = makeBotRow();
+    row.id = '_typing_row';
+    const bub = row.querySelector('.bubble');
+    bub.innerHTML = `<div class="typing"><div class="td"></div><div class="td"></div><div class="td"></div><span class="typing-label">${label}</span></div>`;
+    document.getElementById('chat').appendChild(row);
+    scrollBottom();
+  } else {
+    if (tr) tr.remove();
+  }
+}
+
+function makeBotRow() {
+  const row = document.createElement('div'); row.className = 'row bot';
+  const av  = document.createElement('div'); av.className = 'av'; av.textContent = '🎟️';
+  const wrap = document.createElement('div'); wrap.className = 'bubble-wrap';
+  const bub  = document.createElement('div'); bub.className = 'bubble';
+  const ts   = document.createElement('div'); ts.className = 'ts'; ts.textContent = nowStr();
+  wrap.appendChild(bub); wrap.appendChild(ts);
+  row.appendChild(av); row.appendChild(wrap);
+  return row;
+}
+
+function addUserMsg(text) {
+  const row  = document.createElement('div'); row.className = 'row user';
+  const av   = document.createElement('div'); av.className = 'av'; av.textContent = '👤';
+  const wrap = document.createElement('div'); wrap.className = 'bubble-wrap';
+  const bub  = document.createElement('div'); bub.className = 'bubble';
+  bub.textContent = text;
+  const ts = document.createElement('div'); ts.className = 'ts'; ts.textContent = nowStr();
+  wrap.appendChild(bub); wrap.appendChild(ts);
+  row.appendChild(av); row.appendChild(wrap);
+  document.getElementById('chat').appendChild(row);
+  scrollBottom();
+}
+
+function addBotMsg(html, isErr = false, events = null, suggestions = null) {
+  const row = makeBotRow();
+  const bub = row.querySelector('.bubble');
+  if (isErr) bub.classList.add('err');
+  bub.innerHTML = html;
+  document.getElementById('chat').appendChild(row);
+  scrollBottom();
+}
+
+function addEventsMsg(headerHtml, events, query, locLabel, timeLabel, intent) {
+  const row = makeBotRow();
+  const bub = row.querySelector('.bubble');
+  bub.style.maxWidth = '100%';
+  row.querySelector('.bubble-wrap').style.maxWidth = '100%';
+
+  const hdr = document.createElement('div');
+  hdr.style.marginBottom = '10px';
+  hdr.innerHTML = headerHtml;
+  bub.appendChild(hdr);
+
+  if (!events || events.length === 0) {
+    const nr = document.createElement('div'); nr.className = 'nores';
+    const cityTip = locLabel ? `Try searching <strong>"events in ${locLabel}"</strong> or a nearby major city.` : 'Try including a city name like <strong>"concerts in Mumbai"</strong>.';
+    nr.innerHTML = `<span class="big">🔍</span>No events found in <strong>${locLabel || 'this area'}</strong> for ${timeLabel || 'this period'}.<br><br>${cityTip}<br><br>You can also try a broader time range like <strong>"this month"</strong> or <strong>"next 3 months"</strong>.`;
+    bub.appendChild(nr);
+  } else {
+    // results header
+    const rh = document.createElement('div'); rh.className = 'res-hdr';
+    const rc = document.createElement('div'); rc.className = 'res-count';
+    rc.innerHTML = `Found <strong>${events.length}</strong> event${events.length!==1?'s':''}`;
+    const waAll = document.createElement('a'); waAll.className = 'btn-wa-all';
+    waAll.target = '_blank'; waAll.rel = 'noopener';
+    waAll.href = makeWaDigest(events);
+    waAll.innerHTML = waSVG() + ' Send to WhatsApp';
+    rh.appendChild(rc); rh.appendChild(waAll);
+    bub.appendChild(rh);
+
+    // grid
+    const grid = document.createElement('div'); grid.className = 'ev-grid';
+    events.forEach(ev => grid.appendChild(makeCard(ev)));
+    bub.appendChild(grid);
+  }
+
+  document.getElementById('chat').appendChild(row);
+  scrollBottom();
+}
+
+/* ─── ARTIST EVENTS MESSAGE (two sections) ─── */
+function addArtistEventsMsg(attraction, artistEvents, relatedEvents, locLabel, timeLabel, intent) {
+  const row  = makeBotRow();
+  const bub  = row.querySelector('.bubble');
+  const wrap = row.querySelector('.bubble-wrap');
+  bub.style.maxWidth = '100%';
+  wrap.style.maxWidth = '100%';
+
+  // ── Artist banner ──
+  const banner = document.createElement('div');
+  banner.className = 'artist-banner';
+
+  const thumb = document.createElement('div');
+  thumb.className = 'artist-thumb';
+
+  if (attraction) {
+    const img = attraction.images?.find(i => i.ratio === '1_1' || i.ratio === '3_2')?.url
+              || attraction.images?.[0]?.url;
+    if (img) {
+      const im = document.createElement('img');
+      im.src = img; im.alt = attraction.name;
+      im.onerror = () => { im.remove(); thumb.textContent = '🎤'; };
+      thumb.appendChild(im);
+    } else {
+      thumb.textContent = '🎤';
+    }
+
+    const info = document.createElement('div'); info.className = 'artist-info';
+    const name = document.createElement('div'); name.className = 'artist-name';
+    name.textContent = attraction.name;
+
+    const meta = document.createElement('div'); meta.className = 'artist-meta';
+    const genre = attraction.classifications?.[0]?.segment?.name;
+    const subGenre = attraction.classifications?.[0]?.genre?.name;
+    if (genre) {
+      const tag = document.createElement('span'); tag.className = 'artist-genre-tag';
+      tag.textContent = subGenre && subGenre !== 'Undefined' ? subGenre : genre;
+      meta.appendChild(tag);
+    }
+    if (artistEvents.length > 0) {
+      const cnt = document.createElement('span');
+      cnt.style.color = 'var(--muted)'; cnt.style.fontSize = '11.5px';
+      cnt.textContent = `${artistEvents.length} upcoming show${artistEvents.length !== 1 ? 's' : ''} found`;
+      meta.appendChild(cnt);
+    }
+    info.appendChild(name); info.appendChild(meta);
+    banner.appendChild(thumb); banner.appendChild(info);
+  } else {
+    // Artist not found in Ticketmaster
+    banner.innerHTML = '';
+    banner.className = 'artist-not-found';
+    banner.innerHTML = `⚠️ <strong>"${intent.artist}"</strong> wasn't found in the Ticketmaster artist database. Showing keyword search results instead.`;
+  }
+  bub.appendChild(banner);
+
+  // ── Artist events section ──
+  if (artistEvents.length > 0) {
+    const div1 = document.createElement('div'); div1.className = 'section-divider';
+    const lbl1 = document.createElement('span');
+    lbl1.textContent = `🎤 ${attraction?.name || intent.artist} shows`;
+    div1.appendChild(lbl1); bub.appendChild(div1);
+
+    const g1 = document.createElement('div'); g1.className = 'ev-grid';
+    artistEvents.forEach(ev => g1.appendChild(makeCard(ev, false)));
+    bub.appendChild(g1);
+  } else {
+    const nr = document.createElement('div'); nr.className = 'nores';
+    nr.innerHTML = `<span class="big">🎤</span>No upcoming shows found for <strong>${attraction?.name || intent.artist}</strong> ${locLabel !== 'your area' ? `in <strong>${locLabel}</strong>` : 'near you'}.<br><br>They may be touring elsewhere — try removing the location filter.`;
+    bub.appendChild(nr);
+  }
+
+  // ── Related events section ──
+  if (relatedEvents.length > 0) {
+    const waDigest = makeWaDigest([...artistEvents.slice(0,3), ...relatedEvents.slice(0,2)]);
+    const rh = document.createElement('div'); rh.className = 'res-hdr'; rh.style.marginTop = '8px';
+    const rc = document.createElement('div'); rc.className = 'res-count';
+    rc.innerHTML = `Found <strong>${artistEvents.length + relatedEvents.length}</strong> total events`;
+    const waAll = document.createElement('a'); waAll.className = 'btn-wa-all';
+    waAll.href = waDigest; waAll.target = '_blank'; waAll.rel = 'noopener';
+    waAll.innerHTML = waSVG() + ' Send all to WhatsApp';
+    rh.appendChild(rc); rh.appendChild(waAll);
+    bub.appendChild(rh);
+
+    const div2 = document.createElement('div'); div2.className = 'section-divider';
+    const genre = attraction?.classifications?.[0]?.segment?.name || intent.genre || 'Similar';
+    const lbl2 = document.createElement('span');
+    lbl2.textContent = `✨ You might also like — ${genre} shows near you`;
+    div2.appendChild(lbl2); bub.appendChild(div2);
+
+    const g2 = document.createElement('div'); g2.className = 'ev-grid';
+    relatedEvents.forEach(ev => g2.appendChild(makeCard(ev, true)));
+    bub.appendChild(g2);
+  }
+
+  document.getElementById('chat').appendChild(row);
+  scrollBottom();
+}
+
+/* ─── EVENT CARD ─── */
+function makeCard(ev, isRelated = false) {
+  const name   = ev.name || 'Untitled Event';
+  const date   = ev.dates?.start?.localDate;
+  const time   = ev.dates?.start?.localTime;
+  const venue  = ev._embedded?.venues?.[0];
+  const img    = ev.images?.find(i => i.ratio==='16_9' && i.width>300)?.url || ev.images?.[0]?.url;
+  const minP   = ev.priceRanges?.[0]?.min;
+  const maxP   = ev.priceRanges?.[0]?.max;
+  const url    = ev.url || '#';
+  const seg    = ev.classifications?.[0]?.segment?.name || 'Event';
+  const emoji  = CAT_EMOJI[seg] || '🎉';
+
+  const price  = minP ? (minP===maxP ? `$${minP}` : `$${minP}–$${maxP}`) : 'Price TBD';
+  const venueName = venue ? `${venue.name}${venue.city?.name ? ', '+venue.city.name : ''}` : 'Venue TBD';
+
+  const card = document.createElement('div'); card.className = 'ev-card';
+
+  // thumb
+  const thumb = document.createElement('div'); thumb.className = 'ev-thumb';
+  if (img) {
+    const im = document.createElement('img'); im.src = img; im.alt = name; im.loading = 'lazy';
+    im.onerror = () => { im.style.display='none'; thumb.textContent = emoji; };
+    thumb.appendChild(im);
+  } else {
+    thumb.textContent = emoji;
+  }
+  const badge = document.createElement('span'); badge.className = 'ev-badge'; badge.textContent = seg;
+  thumb.appendChild(badge);
+  if (isRelated) {
+    const rb = document.createElement('span'); rb.className = 'related-badge'; rb.textContent = 'Related';
+    thumb.appendChild(rb);
+  }
+
+  // body
+  const body = document.createElement('div'); body.className = 'ev-body';
+
+  const evname = document.createElement('div'); evname.className = 'ev-name'; evname.textContent = name;
+
+  const meta1 = document.createElement('div'); meta1.className = 'ev-meta';
+  meta1.textContent = `📅 ${fmtDate(date)}${time ? ' · '+fmtTime(time) : ''}`;
+
+  const meta2 = document.createElement('div'); meta2.className = 'ev-meta';
+  meta2.textContent = `📍 ${venueName}`;
+
+  const priceEl = document.createElement('div'); priceEl.className = 'ev-price';
+  priceEl.textContent = price;
+
+  const acts = document.createElement('div'); acts.className = 'ev-acts';
+
+  const buy = document.createElement('a'); buy.className = 'btn-buy';
+  buy.href = url; buy.target = '_blank'; buy.rel = 'noopener';
+  buy.innerHTML = '🎟️ Get Tickets';
+
+  const waText = encodeURIComponent(
+    `🎉 *${name}*\n📅 ${fmtDate(date)}${time?' @ '+fmtTime(time):''}\n📍 ${venueName}\n💵 ${price}\n🎟️ ${url}`
+  );
+  const wa = document.createElement('a'); wa.className = 'btn-wa';
+  wa.href = `https://wa.me/?text=${waText}`; wa.target = '_blank'; wa.rel = 'noopener';
+  wa.innerHTML = waSVG();
+
+  acts.appendChild(buy); acts.appendChild(wa);
+  body.appendChild(evname); body.appendChild(meta1); body.appendChild(meta2);
+  body.appendChild(priceEl); body.appendChild(acts);
+  card.appendChild(thumb); card.appendChild(body);
+  return card;
+}
+
+/* ─── WHATSAPP DIGEST ─── */
+function makeWaDigest(events) {
+  const lines = events.slice(0,5).map((ev,i) =>
+    `${i+1}. *${ev.name}*\n   📅 ${fmtDate(ev.dates?.start?.localDate)}\n   📍 ${ev._embedded?.venues?.[0]?.name || 'TBD'}`
+  ).join('\n\n');
+  const txt = `🎉 *ShowSeeker — Events Near You*\n\n${lines}\n\n_Powered by ShowSeeker × Ticketmaster_`;
+  return `https://wa.me/?text=${encodeURIComponent(txt)}`;
+}
+
+/* ─── MISC ─── */
+function waSVG() {
+  return `<svg class="wa-svg" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/></svg>`;
+}
+
+function fmtDate(d) {
+  if (!d) return 'Date TBD';
+  const dt = new Date(d+'T00:00:00');
+  return dt.toLocaleDateString('en-US',{weekday:'short',month:'short',day:'numeric',year:'numeric'});
+}
+function fmtTime(t) {
+  if (!t) return '';
+  const [h,m] = t.split(':'); const hr=parseInt(h);
+  return `${hr>12?hr-12:(hr||12)}:${m} ${hr>=12?'PM':'AM'}`;
+}
+function nowStr() {
+  return new Date().toLocaleTimeString('en-US',{hour:'numeric',minute:'2-digit'});
+}
+function scrollBottom() {
+  const c = document.getElementById('chat');
+  setTimeout(() => c.scrollTo({top:c.scrollHeight,behavior:'smooth'}), 50);
+}
+</script>
+</body>
+</html>
